@@ -1,13 +1,72 @@
+// ============================================================
 // GlyphMatrix.asm
 // Equipo: [nombres e iniciales de los integrantes aqui]
-// Se pueden teclear hasta 3 iniciales (M, S, C) en cualquier orden; cada una ocupa
-// el siguiente puesto libre de izquierda a derecha (glifos de 32x32, centrados).
-// Al presionar una 4ta tecla valida con los 3 puestos llenos, se libera memoria
-// (se limpian los 3 glifos y se reinicia el conteo).
+//
+// Que hace: dibuja hasta 3 iniciales (M, S, C) en pantalla, cada
+// una un glifo de 32x32 pixeles, en el orden en que se tecleen,
+// una al lado de la otra. Al presionar una tecla valida con los
+// 3 puestos ya llenos, libera memoria (limpia todo y reinicia).
+//
+// Variables usadas:
+//   count        cuantos puestos ya estan ocupados (0..3)
+//   slotOffset   desplazamiento en palabras del puesto activo
+//                (0, 3 o 6), sumado a la direccion base de cada fila
+//   addr         direccion de escritura calculada en cada paso
+//   letterTarget direccion de ROM de la rutina DRAW_X a ejecutar
+//                (permite un salto indirecto, ver COMPUTE_OFFSET_AND_JUMP)
+//   BIT15        constante 32768 (bit 15 encendido), ver nota abajo
+//
+// Nota tecnica clave: una instruccion @valor solo puede codificar
+// 0..32767 (15 bits). Los pixeles de un glifo forman patrones de
+// 16 bits que a veces necesitan el bit 15 encendido (pixel mas a
+// la derecha de esa palabra), lo cual excede ese limite. La solucion:
+// cargar los 15 bits bajos con una A-instruccion normal, y si hace
+// falta el bit 15, combinarlo con OR (D=D|M) contra BIT15, calculado
+// una sola vez al arrancar el programa.
+// ============================================================
+
+// --- Construir la constante BIT15 (32768) una sola vez ---
+@1
+D=A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+A=D
+D=D+A
+@BIT15
+M=D
 
 @count
 M=0
 
+// ============================================================
+// LOOP PRINCIPAL: sondeo continuo del teclado
+// ============================================================
 (WAIT_PRESS)
     @KBD
     D=M
@@ -32,9 +91,17 @@ M=0
     D=D-A
     @CHECK_C
     D;JEQ
+    @KBD
+    D=M
+    @32
+    D=D-A
+    @RESET
+    D;JEQ
     @WAIT_RELEASE
     0;JMP
 
+// Si count ya es 3, esta tecla es la '4ta letra': libera memoria.
+// Si hay espacio, guarda a donde saltar (DRAW_M) y calcula el puesto.
 (CHECK_M)
     @count
     D=M
@@ -49,6 +116,8 @@ M=0
     @COMPUTE_OFFSET_AND_JUMP
     0;JMP
 
+// Si count ya es 3, esta tecla es la '4ta letra': libera memoria.
+// Si hay espacio, guarda a donde saltar (DRAW_S) y calcula el puesto.
 (CHECK_S)
     @count
     D=M
@@ -63,6 +132,8 @@ M=0
     @COMPUTE_OFFSET_AND_JUMP
     0;JMP
 
+// Si count ya es 3, esta tecla es la '4ta letra': libera memoria.
+// Si hay espacio, guarda a donde saltar (DRAW_C) y calcula el puesto.
 (CHECK_C)
     @count
     D=M
@@ -77,6 +148,11 @@ M=0
     @COMPUTE_OFFSET_AND_JUMP
     0;JMP
 
+// ============================================================
+// Calcula el desplazamiento del puesto segun count (0,1,2) y
+// salta a la rutina DRAW_X guardada en letterTarget (salto indirecto:
+// A=M carga la direccion de ROM guardada, 0;JMP salta ahi).
+// ============================================================
 (COMPUTE_OFFSET_AND_JUMP)
     @count
     D=M
@@ -118,6 +194,13 @@ M=0
     A=M
     0;JMP
 
+// ------------------------------------------------------------
+// DRAW_M: dibuja el glifo de 32x32 de la letra M.
+// Cada fila: direccion = base_fija_de_esa_fila + slotOffset.
+// 'D=D-A' no se reutiliza aqui: solo se recarga @valor cuando
+// el patron de bits cambia respecto a la fila anterior (ahorra
+// instrucciones en los trazos solidos del glifo).
+// ------------------------------------------------------------
 (DRAW_M)
     @19980
     D=A
@@ -132,8 +215,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @65472
+    @32704
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -150,8 +235,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @64480
+    @31712
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -168,8 +255,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @64480
+    @31712
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -186,8 +275,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63984
+    @31216
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -204,8 +295,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63984
+    @31216
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -222,8 +315,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63984
+    @31216
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -240,8 +335,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63736
+    @30968
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -258,8 +355,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63736
+    @30968
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -276,8 +375,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63736
+    @30968
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -294,8 +395,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63612
+    @30844
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -312,8 +415,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63612
+    @30844
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -330,8 +435,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63550
+    @30782
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -348,8 +455,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63550
+    @30782
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -366,8 +475,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63550
+    @30782
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -384,8 +495,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63519
+    @30751
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -402,8 +515,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63519
+    @30751
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -420,8 +535,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -438,8 +555,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -456,8 +575,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -474,8 +595,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -492,8 +615,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -510,8 +635,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -528,8 +655,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -546,8 +675,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -564,8 +695,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -582,8 +715,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -600,8 +735,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -618,8 +755,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -636,8 +775,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -654,8 +795,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -672,8 +815,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -690,8 +835,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -700,6 +847,13 @@ M=0
     @WAIT_RELEASE
     0;JMP
 
+// ------------------------------------------------------------
+// DRAW_S: dibuja el glifo de 32x32 de la letra S.
+// Cada fila: direccion = base_fija_de_esa_fila + slotOffset.
+// 'D=D-A' no se reutiliza aqui: solo se recarga @valor cuando
+// el patron de bits cambia respecto a la fila anterior (ahorra
+// instrucciones en los trazos solidos del glifo).
+// ------------------------------------------------------------
 (DRAW_S)
     @19980
     D=A
@@ -707,15 +861,15 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
+    @32767
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -725,15 +879,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -743,15 +893,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -761,15 +907,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -779,15 +921,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -959,15 +1097,15 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
+    @32767
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -977,15 +1115,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -995,15 +1129,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1013,15 +1143,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1031,15 +1157,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1056,8 +1178,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -1074,8 +1198,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -1092,8 +1218,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -1110,8 +1238,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -1128,8 +1258,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -1146,8 +1278,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -1164,8 +1298,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -1182,8 +1318,10 @@ M=0
     M=D
     @addr
     M=M+1
-    @63488
+    @30720
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
@@ -1193,15 +1331,15 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
+    @32767
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1211,15 +1349,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1229,15 +1363,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1247,15 +1377,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1265,15 +1391,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1282,6 +1404,13 @@ M=0
     @WAIT_RELEASE
     0;JMP
 
+// ------------------------------------------------------------
+// DRAW_C: dibuja el glifo de 32x32 de la letra C.
+// Cada fila: direccion = base_fija_de_esa_fila + slotOffset.
+// 'D=D-A' no se reutiliza aqui: solo se recarga @valor cuando
+// el patron de bits cambia respecto a la fila anterior (ahorra
+// instrucciones en los trazos solidos del glifo).
+// ------------------------------------------------------------
 (DRAW_C)
     @19980
     D=A
@@ -1289,15 +1418,15 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
+    @32767
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1307,15 +1436,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1325,15 +1450,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1343,15 +1464,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1361,15 +1478,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1775,15 +1888,15 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
+    @32767
     D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1793,15 +1906,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1811,15 +1920,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1829,15 +1934,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1847,15 +1948,11 @@ M=0
     D=D+M
     @addr
     M=D
-    @65535
-    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
-    @65535
-    D=A
     @addr
     A=M
     M=D
@@ -1864,396 +1961,70 @@ M=0
     @WAIT_RELEASE
     0;JMP
 
+// ============================================================
+// RESET: limpia con un loop (fila 0..31, columna 0..7) el
+// rectangulo de 8 palabras de ancho que cubre los 3 puestos
+// (glifo + hueco intermedio); limpiar el hueco es inofensivo
+// porque ahi nunca se escribe nada mientras se dibuja.
+// ============================================================
 (RESET)
     @19980
-    M=0
-    @19981
-    M=0
-    @20012
-    M=0
-    @20013
-    M=0
-    @20044
-    M=0
-    @20045
-    M=0
-    @20076
-    M=0
-    @20077
-    M=0
-    @20108
-    M=0
-    @20109
-    M=0
-    @20140
-    M=0
-    @20141
-    M=0
-    @20172
-    M=0
-    @20173
-    M=0
-    @20204
-    M=0
-    @20205
-    M=0
-    @20236
-    M=0
-    @20237
-    M=0
-    @20268
-    M=0
-    @20269
-    M=0
-    @20300
-    M=0
-    @20301
-    M=0
-    @20332
-    M=0
-    @20333
-    M=0
-    @20364
-    M=0
-    @20365
-    M=0
-    @20396
-    M=0
-    @20397
-    M=0
-    @20428
-    M=0
-    @20429
-    M=0
-    @20460
-    M=0
-    @20461
-    M=0
-    @20492
-    M=0
-    @20493
-    M=0
-    @20524
-    M=0
-    @20525
-    M=0
-    @20556
-    M=0
-    @20557
-    M=0
-    @20588
-    M=0
-    @20589
-    M=0
-    @20620
-    M=0
-    @20621
-    M=0
-    @20652
-    M=0
-    @20653
-    M=0
-    @20684
-    M=0
-    @20685
-    M=0
-    @20716
-    M=0
-    @20717
-    M=0
-    @20748
-    M=0
-    @20749
-    M=0
-    @20780
-    M=0
-    @20781
-    M=0
-    @20812
-    M=0
-    @20813
-    M=0
-    @20844
-    M=0
-    @20845
-    M=0
-    @20876
-    M=0
-    @20877
-    M=0
-    @20908
-    M=0
-    @20909
-    M=0
-    @20940
-    M=0
-    @20941
-    M=0
-    @20972
-    M=0
-    @20973
-    M=0
-    @19983
-    M=0
-    @19984
-    M=0
-    @20015
-    M=0
-    @20016
-    M=0
-    @20047
-    M=0
-    @20048
-    M=0
-    @20079
-    M=0
-    @20080
-    M=0
-    @20111
-    M=0
-    @20112
-    M=0
-    @20143
-    M=0
-    @20144
-    M=0
-    @20175
-    M=0
-    @20176
-    M=0
-    @20207
-    M=0
-    @20208
-    M=0
-    @20239
-    M=0
-    @20240
-    M=0
-    @20271
-    M=0
-    @20272
-    M=0
-    @20303
-    M=0
-    @20304
-    M=0
-    @20335
-    M=0
-    @20336
-    M=0
-    @20367
-    M=0
-    @20368
-    M=0
-    @20399
-    M=0
-    @20400
-    M=0
-    @20431
-    M=0
-    @20432
-    M=0
-    @20463
-    M=0
-    @20464
-    M=0
-    @20495
-    M=0
-    @20496
-    M=0
-    @20527
-    M=0
-    @20528
-    M=0
-    @20559
-    M=0
-    @20560
-    M=0
-    @20591
-    M=0
-    @20592
-    M=0
-    @20623
-    M=0
-    @20624
-    M=0
-    @20655
-    M=0
-    @20656
-    M=0
-    @20687
-    M=0
-    @20688
-    M=0
-    @20719
-    M=0
-    @20720
-    M=0
-    @20751
-    M=0
-    @20752
-    M=0
-    @20783
-    M=0
-    @20784
-    M=0
-    @20815
-    M=0
-    @20816
-    M=0
-    @20847
-    M=0
-    @20848
-    M=0
-    @20879
-    M=0
-    @20880
-    M=0
-    @20911
-    M=0
-    @20912
-    M=0
-    @20943
-    M=0
-    @20944
-    M=0
-    @20975
-    M=0
-    @20976
-    M=0
-    @19986
-    M=0
-    @19987
-    M=0
-    @20018
-    M=0
-    @20019
-    M=0
-    @20050
-    M=0
-    @20051
-    M=0
-    @20082
-    M=0
-    @20083
-    M=0
-    @20114
-    M=0
-    @20115
-    M=0
-    @20146
-    M=0
-    @20147
-    M=0
-    @20178
-    M=0
-    @20179
-    M=0
-    @20210
-    M=0
-    @20211
-    M=0
-    @20242
-    M=0
-    @20243
-    M=0
-    @20274
-    M=0
-    @20275
-    M=0
-    @20306
-    M=0
-    @20307
-    M=0
-    @20338
-    M=0
-    @20339
-    M=0
-    @20370
-    M=0
-    @20371
-    M=0
-    @20402
-    M=0
-    @20403
-    M=0
-    @20434
-    M=0
-    @20435
-    M=0
-    @20466
-    M=0
-    @20467
-    M=0
-    @20498
-    M=0
-    @20499
-    M=0
-    @20530
-    M=0
-    @20531
-    M=0
-    @20562
-    M=0
-    @20563
-    M=0
-    @20594
-    M=0
-    @20595
-    M=0
-    @20626
-    M=0
-    @20627
-    M=0
-    @20658
-    M=0
-    @20659
-    M=0
-    @20690
-    M=0
-    @20691
-    M=0
-    @20722
-    M=0
-    @20723
-    M=0
-    @20754
-    M=0
-    @20755
-    M=0
-    @20786
-    M=0
-    @20787
-    M=0
-    @20818
-    M=0
-    @20819
-    M=0
-    @20850
-    M=0
-    @20851
-    M=0
-    @20882
-    M=0
-    @20883
-    M=0
-    @20914
-    M=0
-    @20915
-    M=0
-    @20946
-    M=0
-    @20947
-    M=0
-    @20978
-    M=0
-    @20979
-    M=0
+    D=A
+    @rowBase
+    M=D
+    @rowCount
+    M=0
+(CLEAR_ROW)
+    @rowCount
+    D=M
+    @32
+    D=D-A
+    @CLEAR_DONE
+    D;JGE
+
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @colCount
+    M=0
+(CLEAR_COL)
+    @colCount
+    D=M
+    @8
+    D=D-A
+    @NEXT_ROW
+    D;JGE
+    @addr
+    A=M
+    M=0
+    @addr
+    M=M+1
+    @colCount
+    M=M+1
+    @CLEAR_COL
+    0;JMP
+
+(NEXT_ROW)
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowCount
+    M=M+1
+    @CLEAR_ROW
+    0;JMP
+
+(CLEAR_DONE)
     @count
     M=0
     @WAIT_RELEASE
     0;JMP
 
+// ============================================================
+// Debounce: espera a que la tecla se suelte antes de volver a
+// sondear, para que una sola pulsacion cuente una sola vez.
+// ============================================================
 (WAIT_RELEASE)
     @KBD
     D=M
