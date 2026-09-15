@@ -1,110 +1,51 @@
-# Sqrt.asm
+# Segundo Examen Parcial | Organización de Computadores
 
-## Descripción
+## Índice
+1. [Parte 1 de la entrega: Raíz cuadrada entera](#parte-1-de-la-entrega-raíz-cuadrada-entera)
+   1. [Pasos de ejecución](#pasos-de-ejecución)
+2. [Parte 2 de la entrega: Interfaz gráfica de matriz](#parte-2-de-la-entrega-interfaz-gráfica-de-matriz)
+   1. [Pasos de ejecución](#pasos-de-ejecución-1)
+3. [Autores](#autores)
+4. [Información del curso](#información-del-curso)
 
-`Sqrt.asm` se encarga de obtener, única y exclusivamente, la parte entera de la raíz cuadrada de un número **x**, que debe ser un entero positivo y mayor o igual a cero.
+## Parte 1 de la entrega: Raíz cuadrada entera
 
-## Entrada y salida
+`Sqrt.asm` calcula la parte entera de la raíz cuadrada de un número positivo. El valor de entrada se ubica en `RAM[0]`; el resultado se guarda en `RAM[1]`.
 
-El programa ubica el valor del cual se obtendrá la raíz cuadrada en la posición **0** de la RAM, como se ve aquí:
+El algoritmo prueba candidatos `x = 0, 1, 2, ...` en un loop. En cada vuelta calcula `x²` (multiplicación por sumas sucesivas, ya que Hack no tiene instrucción de multiplicar), y compara ese cuadrado contra el valor original (`RAM[0]`). Mientras `x² ≤ RAM[0]`, ese `x` se guarda como la mejor respuesta hasta el momento y se prueba con `x+1`. En cuanto `x² > RAM[0]`, el programa se detiene: la última respuesta guardada es la parte entera de la raíz cuadrada.
 
-```hack_asm
-@0
-D=A
-@0
-M=D
-```
+### Pasos de ejecución
 
-Y la respuesta se ubica en la posición **1** de la RAM:
+1. Cargar `Sqrt.asm` en el CPU Emulator (Nand2Tetris).
+2. Escribir el número a evaluar en `RAM[0]`.
+3. Ejecutar (Run).
+4. Leer el resultado en `RAM[1]`.
 
-```hack_asm
-@1
-M=0
-```
+## Parte 2 de la entrega: Interfaz gráfica de matriz
 
-## Funcionamiento
+`GlyphMatrix.asm` hace polling continuo del teclado (`KBD`) y dibuja glifos de 32×32 píxeles en pantalla. Se pueden teclear hasta 3 iniciales (**M**, **S**, **C**), en cualquier orden, y cada una ocupa el siguiente puesto libre de izquierda a derecha, centradas como grupo en pantalla.
 
-### Candidato a raíz cuadrada
+Al presionar una tecla válida con los 3 puestos ya ocupados, se libera memoria automáticamente (limpia todo y reinicia el conteo). La barra espaciadora limpia todo en cualquier momento, sin importar cuántos puestos estén ocupados.
 
-Los posibles números que vamos probando, para ver si son o no la solución, se ubican en esta sección del código, iniciando en 0:
+**Detalles técnicos relevantes:**
+- Cada letra se dibuja en la posición determinada por el orden en que se tecleó, no por su identidad — mediante un desplazamiento (`slotOffset`) calculado en tiempo de ejecución y un salto indirecto a la rutina de dibujo correspondiente.
+- Los patrones de píxeles de 16 bits que necesitan el bit más significativo encendido (valor ≥ 32768) no caben en una sola instrucción `@valor` (límite de 15 bits en Hack). Se resuelve construyendo una constante `BIT15 = 32768` una sola vez al inicio y combinándola con `OR` cuando hace falta.
+- La limpieza de pantalla (`RESET`) usa un loop anidado de 32 filas × 8 columnas en vez de instrucciones repetidas una por una, para reducir el tamaño del programa.
 
-```hack_asm
-@x
-M=0
-```
+### Pasos de ejecución
 
-### Preparación de la multiplicación
+1. Cargar `GlyphMatrix.asm` en el CPU Emulator.
+2. Ejecutar con animación desactivada (**Run → Animate → No Animation**).
+3. Con la ventana del emulador enfocada, presionar `M`, `S` o `C` — el glifo aparece en el siguiente puesto libre.
+4. Repetir con otra inicial para ver cómo se ubican una al lado de la otra.
+5. Presionar una 4ta tecla válida con los 3 puestos llenos, o presionar la barra espaciadora en cualquier momento: la pantalla se limpia.
 
-Aquí se establecen los valores del multiplicando (`a`) y el multiplicador (`b`), ambos con el mismo valor, para obtener el número que se está probando en ese momento, elevado al cuadrado:
+## Autores
 
-```hack_asm
-(LOOP)
-    @prod
-    M=0        
+**Mateo Montoya Ospina** <br>
+**Sebastian Ibarra Prada** <br>
+**Miguel Angel Colorado Castaño**
 
-    @x
-    D=M
-    @a
-    M=D        
-    @b
-    M=D        
-```
-
-### Multiplicación por sumas sucesivas
-
-Esta sección realiza la multiplicación por medio de la suma consecutiva del multiplicando `a`, tantas veces como lo indique el multiplicador `b`, guardando el resultado en `prod`. Cuando `b` llega a 0, se pasa a la verificación de la raíz cuadrada, en la parte de abajo. Además, la condición de que `b` sea igual a 0 se comprueba desde el inicio del bucle, para cubrir correctamente el caso de la raíz cuadrada de 0.
-
-```hack_asm
-(MULTIPLICATION_LOOP)
-    @b
-    D=M
-    @MULTIPLICATION_END
-    D;JEQ
-
-    @a
-    D=M
-    @prod
-    M=M+D
-
-    @b
-    M=M-1
-
-    @MULTIPLICATION_LOOP
-    0;JMP
-```
-
-### Verificación de la raíz y actualización de la respuesta
-
-En esta parte verificamos si `x² - R0 > 0`, lo cual indica si el número `x` que estamos probando ya superó la raíz cuadrada del número original. Si esto es verdadero, el proceso termina y ese valor de `x` queda descartado. Si es falso, guardamos ese valor de `x` en la posición 1 de la RAM —la respuesta— y volvemos a probar con un valor de `x` mayor, repitiendo el ciclo llevado hasta ese momento.
-
-```hack_asm
-(MULTIPLICATION_END)
-    @prod
-    D=M
-    @R0
-    D=D-M          
-
-    @END
-    D;JGT
-
-    @x
-    D=M
-    @1
-    M=D
-
-    @x
-    M=M+1
-
-    @LOOP
-    0;JMP
-```
-
-### Finalización
-
-En esta última parte se realiza un ciclo infinito para terminar el programa, una vez que ya se obtuvo la parte entera de la raíz cuadrada del número.
-
-```hack_asm
-(END)
-    @END
-    0;JMP
-```
+## Información del curso
+**Curso:** Organización de Computadores - S2666-0322 <br>
+**Profesor:** Edison Valencia Diaz
