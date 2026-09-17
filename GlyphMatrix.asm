@@ -1,17 +1,24 @@
 // ============================================================
 // GlyphMatrix.asm
-// Equipo: [nombres e iniciales de los integrantes aqui]
+// Equipo: Mateo Montoya Ospina, Sebastian Ibarra Prada, Miguel Angel Colorado Castano
+//
+// Iniciales usadas: M, S, C (no hay colision entre integrantes,
+// por lo que no hizo falta aplicar la regla de alternar a la
+// inicial del primer apellido).
 //
 // Que hace: dibuja hasta 3 iniciales (M, S, C) en pantalla, cada
 // una un glifo de 32x32 pixeles, en el orden en que se tecleen,
 // una al lado de la otra. Al presionar una tecla valida con los
 // 3 puestos ya llenos, libera memoria (limpia todo y reinicia).
+// La barra espaciadora limpia en cualquier momento.
 //
 // Variables usadas:
 //   count        cuantos puestos ya estan ocupados (0..3)
 //   slotOffset   desplazamiento en palabras del puesto activo
 //                (0, 3 o 6), sumado a la direccion base de cada fila
-//   addr         direccion de escritura calculada en cada paso
+//   rowBase      direccion base de la fila actual del glifo; avanza
+//                +32 registros por fila (ancho completo del framebuffer)
+//   addr         direccion de escritura activa en cada paso
 //   letterTarget direccion de ROM de la rutina DRAW_X a ejecutar
 //                (permite un salto indirecto, ver COMPUTE_OFFSET_AND_JUMP)
 //   BIT15        constante 32768 (bit 15 encendido), ver nota abajo
@@ -150,8 +157,7 @@ M=0
 
 // ============================================================
 // Calcula el desplazamiento del puesto segun count (0,1,2) y
-// salta a la rutina DRAW_X guardada en letterTarget (salto indirecto:
-// A=M carga la direccion de ROM guardada, 0;JMP salta ahi).
+// salta a la rutina DRAW_X guardada en letterTarget.
 // ============================================================
 (COMPUTE_OFFSET_AND_JUMP)
     @count
@@ -196,16 +202,19 @@ M=0
 
 // ------------------------------------------------------------
 // DRAW_M: dibuja el glifo de 32x32 de la letra M.
-// Cada fila: direccion = base_fija_de_esa_fila + slotOffset.
-// 'D=D-A' no se reutiliza aqui: solo se recarga @valor cuando
-// el patron de bits cambia respecto a la fila anterior (ahorra
-// instrucciones en los trazos solidos del glifo).
+// rowBase arranca en la direccion de la fila 0 (+ slotOffset del
+// puesto activo) y avanza +32 registros por fila -- el ancho
+// completo del framebuffer -- a lo largo de las 32 filas.
 // ------------------------------------------------------------
 (DRAW_M)
     @19980
     D=A
     @slotOffset
     D=D+M
+    @rowBase
+    M=D
+    @rowBase
+    D=M
     @addr
     M=D
     @1023
@@ -222,10 +231,12 @@ M=0
     @addr
     A=M
     M=D
-    @20012
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @1023
@@ -242,10 +253,12 @@ M=0
     @addr
     A=M
     M=D
-    @20044
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @1023
@@ -262,10 +275,12 @@ M=0
     @addr
     A=M
     M=D
-    @20076
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @2015
@@ -282,10 +297,12 @@ M=0
     @addr
     A=M
     M=D
-    @20108
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @2015
@@ -302,10 +319,12 @@ M=0
     @addr
     A=M
     M=D
-    @20140
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @2015
@@ -322,10 +341,12 @@ M=0
     @addr
     A=M
     M=D
-    @20172
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @3999
@@ -342,10 +363,12 @@ M=0
     @addr
     A=M
     M=D
-    @20204
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @3999
@@ -362,10 +385,12 @@ M=0
     @addr
     A=M
     M=D
-    @20236
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @7967
@@ -382,10 +407,12 @@ M=0
     @addr
     A=M
     M=D
-    @20268
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @7967
@@ -402,10 +429,12 @@ M=0
     @addr
     A=M
     M=D
-    @20300
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @7967
@@ -422,10 +451,12 @@ M=0
     @addr
     A=M
     M=D
-    @20332
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @15903
@@ -442,10 +473,12 @@ M=0
     @addr
     A=M
     M=D
-    @20364
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @15903
@@ -462,10 +495,12 @@ M=0
     @addr
     A=M
     M=D
-    @20396
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @15903
@@ -482,10 +517,12 @@ M=0
     @addr
     A=M
     M=D
-    @20428
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31775
@@ -502,10 +539,12 @@ M=0
     @addr
     A=M
     M=D
-    @20460
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31775
@@ -522,10 +561,12 @@ M=0
     @addr
     A=M
     M=D
-    @20492
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -542,10 +583,12 @@ M=0
     @addr
     A=M
     M=D
-    @20524
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -562,10 +605,12 @@ M=0
     @addr
     A=M
     M=D
-    @20556
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -582,10 +627,12 @@ M=0
     @addr
     A=M
     M=D
-    @20588
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -602,10 +649,12 @@ M=0
     @addr
     A=M
     M=D
-    @20620
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -622,10 +671,12 @@ M=0
     @addr
     A=M
     M=D
-    @20652
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -642,10 +693,12 @@ M=0
     @addr
     A=M
     M=D
-    @20684
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -662,10 +715,12 @@ M=0
     @addr
     A=M
     M=D
-    @20716
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -682,10 +737,12 @@ M=0
     @addr
     A=M
     M=D
-    @20748
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -702,10 +759,12 @@ M=0
     @addr
     A=M
     M=D
-    @20780
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -722,10 +781,12 @@ M=0
     @addr
     A=M
     M=D
-    @20812
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -742,10 +803,12 @@ M=0
     @addr
     A=M
     M=D
-    @20844
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -762,10 +825,12 @@ M=0
     @addr
     A=M
     M=D
-    @20876
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -782,10 +847,12 @@ M=0
     @addr
     A=M
     M=D
-    @20908
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -802,10 +869,12 @@ M=0
     @addr
     A=M
     M=D
-    @20940
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -822,10 +891,12 @@ M=0
     @addr
     A=M
     M=D
-    @20972
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @31
@@ -842,6 +913,10 @@ M=0
     @addr
     A=M
     M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
     @count
     M=M+1
     @WAIT_RELEASE
@@ -849,16 +924,19 @@ M=0
 
 // ------------------------------------------------------------
 // DRAW_S: dibuja el glifo de 32x32 de la letra S.
-// Cada fila: direccion = base_fija_de_esa_fila + slotOffset.
-// 'D=D-A' no se reutiliza aqui: solo se recarga @valor cuando
-// el patron de bits cambia respecto a la fila anterior (ahorra
-// instrucciones en los trazos solidos del glifo).
+// rowBase arranca en la direccion de la fila 0 (+ slotOffset del
+// puesto activo) y avanza +32 registros por fila -- el ancho
+// completo del framebuffer -- a lo largo de las 32 filas.
 // ------------------------------------------------------------
 (DRAW_S)
     @19980
     D=A
     @slotOffset
     D=D+M
+    @rowBase
+    M=D
+    @rowBase
+    D=M
     @addr
     M=D
     @32767
@@ -870,231 +948,19 @@ M=0
     M=D
     @addr
     M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
-    @20012
+    @32
     D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20044
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20076
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20108
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20140
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20172
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20204
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20236
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20268
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20300
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20332
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20364
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20396
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20428
-    D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @32767
@@ -1106,229 +972,19 @@ M=0
     M=D
     @addr
     M=M+1
-    @addr
-    A=M
-    M=D
-    @20460
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20492
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20524
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20556
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20588
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @30720
+    @32767
     D=A
     @BIT15
     D=D|M
     @addr
     A=M
     M=D
-    @20620
+    @32
     D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @30720
-    D=A
-    @BIT15
-    D=D|M
-    @addr
-    A=M
-    M=D
-    @20652
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @30720
-    D=A
-    @BIT15
-    D=D|M
-    @addr
-    A=M
-    M=D
-    @20684
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @30720
-    D=A
-    @BIT15
-    D=D|M
-    @addr
-    A=M
-    M=D
-    @20716
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @30720
-    D=A
-    @BIT15
-    D=D|M
-    @addr
-    A=M
-    M=D
-    @20748
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @30720
-    D=A
-    @BIT15
-    D=D|M
-    @addr
-    A=M
-    M=D
-    @20780
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @30720
-    D=A
-    @BIT15
-    D=D|M
-    @addr
-    A=M
-    M=D
-    @20812
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @30720
-    D=A
-    @BIT15
-    D=D|M
-    @addr
-    A=M
-    M=D
-    @20844
-    D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @32767
@@ -1340,65 +996,661 @@ M=0
     M=D
     @addr
     M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
-    @20876
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
     @addr
     M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
-    @20908
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
     @addr
     M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
-    @20940
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
+    @31
+    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
+    @0
+    D=A
     @addr
     A=M
     M=D
-    @20972
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
+    @31
+    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
+    @0
+    D=A
     @addr
     A=M
     M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @30720
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @30720
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @30720
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @30720
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @30720
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @30720
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @30720
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @30720
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
     @count
     M=M+1
     @WAIT_RELEASE
@@ -1406,16 +1658,19 @@ M=0
 
 // ------------------------------------------------------------
 // DRAW_C: dibuja el glifo de 32x32 de la letra C.
-// Cada fila: direccion = base_fija_de_esa_fila + slotOffset.
-// 'D=D-A' no se reutiliza aqui: solo se recarga @valor cuando
-// el patron de bits cambia respecto a la fila anterior (ahorra
-// instrucciones en los trazos solidos del glifo).
+// rowBase arranca en la direccion de la fila 0 (+ slotOffset del
+// puesto activo) y avanza +32 registros por fila -- el ancho
+// completo del framebuffer -- a lo largo de las 32 filas.
 // ------------------------------------------------------------
 (DRAW_C)
     @19980
     D=A
     @slotOffset
     D=D+M
+    @rowBase
+    M=D
+    @rowBase
+    D=M
     @addr
     M=D
     @32767
@@ -1427,465 +1682,19 @@ M=0
     M=D
     @addr
     M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
-    @20012
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20044
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20076
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20108
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @addr
-    A=M
-    M=D
-    @20140
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20172
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20204
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20236
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20268
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20300
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20332
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20364
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20396
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20428
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20460
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20492
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20524
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20556
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20588
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20620
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20652
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20684
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20716
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20748
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20780
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20812
-    D=A
-    @slotOffset
-    D=D+M
-    @addr
-    M=D
-    @31
-    D=A
-    @addr
-    A=M
-    M=D
-    @addr
-    M=M+1
-    @0
-    D=A
-    @addr
-    A=M
-    M=D
-    @20844
-    D=A
-    @slotOffset
-    D=D+M
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
     @32767
@@ -1897,65 +1706,649 @@ M=0
     M=D
     @addr
     M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
-    @20876
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
     @addr
     M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
-    @20908
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
     @addr
     M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
-    @20940
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
     @addr
     M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
     @addr
     A=M
     M=D
-    @20972
+    @32
     D=A
-    @slotOffset
-    D=D+M
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
     @addr
     M=D
+    @31
+    D=A
     @addr
     A=M
     M=D
     @addr
     M=M+1
+    @0
+    D=A
     @addr
     A=M
     M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @31
+    D=A
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @0
+    D=A
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
+    @rowBase
+    D=M
+    @addr
+    M=D
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @addr
+    M=M+1
+    @32767
+    D=A
+    @BIT15
+    D=D|M
+    @addr
+    A=M
+    M=D
+    @32
+    D=A
+    @rowBase
+    M=D+M
     @count
     M=M+1
     @WAIT_RELEASE
@@ -1963,9 +2356,7 @@ M=0
 
 // ============================================================
 // RESET: limpia con un loop (fila 0..31, columna 0..7) el
-// rectangulo de 8 palabras de ancho que cubre los 3 puestos
-// (glifo + hueco intermedio); limpiar el hueco es inofensivo
-// porque ahi nunca se escribe nada mientras se dibuja.
+// rectangulo de 8 palabras de ancho que cubre los 3 puestos.
 // ============================================================
 (RESET)
     @19980
